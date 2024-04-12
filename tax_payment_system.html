@@ -4,65 +4,101 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tax Payment Tracking System</title>
+    <style>
+        .scrollable {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
 </head>
 <body>
     <h1>Tax Payment Tracking System</h1>
-    
-    <!-- Form for adding/editing tax payments -->
-    <form id="taxPaymentForm">
-        <label for="company">Company:</label>
-        <input type="text" id="company" name="company" required><br><br>
-        
+    <form id="paymentForm" action="/payments" method="POST">
+        <label for="company_id">Company ID:</label>
+        <input type="text" id="company_id" name="company_id" required><br>
+
         <label for="amount">Amount:</label>
-        <input type="number" id="amount" name="amount" required><br><br>
-        
-        <label for="paymentDate">Payment Date:</label>
-        <input type="date" id="paymentDate" name="paymentDate" required><br><br>
-        
+        <input type="text" id="amount" name="amount" required><br>
+
+        <label for="payment_date">Payment Date:</label>
+        <input type="text" id="payment_date" name="payment_date" required><br>
+
         <label for="status">Status:</label>
-        <input type="text" id="status" name="status"><br><br>
-        
-        <label for="dueDate">Due Date:</label>
-        <select id="dueDate" name="dueDate" required>
-            <option value="April 15">April 15</option>
-            <option value="June 15">June 15</option>
-            <option value="September 15">September 15</option>
-            <option value="January 15">January 15 (Next Year)</option>
-        </select><br><br>
-        
+        <input type="text" id="status" name="status" required><br>
+
+        <label for="due_date">Due Date:</label>
+        <select id="due_date" name="due_date" onchange="updateSummary()" required>
+            <option value="">Select Due Date</option>
+            <!-- Options will be dynamically generated -->
+        </select><br>
+
+        <label for="tax_rate">Tax Rate (Decimal):</label>
+        <input type="text" id="tax_rate" name="tax_rate" required><br>
+
         <button type="submit">Save</button>
     </form>
-    
-    <!-- Table to display tax payments -->
-    <h2>Tax Payment Summary</h2>
-    <div id="taxPaymentSummary"></div>
-    
+
+    <h2>Payment Records</h2>
+    <div class="scrollable">
+        <table id="paymentRecords" border="1">
+            <!-- Payment records will be dynamically generated -->
+        </table>
+    </div>
+
+    <h2>Summary Table</h2>
+    <div id="summaryTable" class="scrollable">
+        <!-- Summary table will be dynamically generated -->
+    </div>
+
     <script>
-        // JavaScript code for handling form submission and dynamic content
-        
-        // Function to handle form submission
-        document.getElementById("taxPaymentForm").addEventListener("submit", function(event) {
-            event.preventDefault(); // Prevent default form submission
-            
-            // Code to submit form data via AJAX to server and handle response
-            
-            // Assuming the response contains updated tax payment summary, update the summary
-            updateTaxPaymentSummary();
-        });
-        
-        // Function to update tax payment summary
-        function updateTaxPaymentSummary() {
-            // Code to fetch and update tax payment summary via AJAX
-            
-            // For demonstration purposes, let's assume we have the summary HTML content
-            var summaryHtml = "<table><thead><tr><th>Company</th><th>Amount</th><th>Payment Date</th><th>Status</th><th>Due Date</th></tr></thead><tbody><tr><td>derm</td><td>4100</td><td>09/26/2023</td><td>paid</td><td>September 15</td></tr><tr><td>derm</td><td>4100</td><td>10/12/2023</td><td>paid</td><td>September 15</td></tr></tbody></table>";
-            
-            // Update the tax payment summary element
-            document.getElementById("taxPaymentSummary").innerHTML = summaryHtml;
+        function updateSummary() {
+            var dueDate = document.getElementById('due_date').value;
+            var taxRate = parseFloat(document.getElementById('tax_rate').value);
+            fetch('/summary?due_date=' + dueDate)
+            .then(response => response.json())
+            .then(data => {
+                var summaryTable = document.getElementById('summaryTable');
+                var html = '<table border="1">';
+                html += '<tr><th>Company ID</th><th>Amount</th><th>Tax Due</th><th>Payment Date</th><th>Status</th><th>Due Date</th></tr>';
+                data.forEach(payment => {
+                    var taxDue = (parseFloat(payment.amount) * taxRate).toFixed(2);
+                    html += '<tr>';
+                    html += '<td>' + payment.company_id + '</td>';
+                    html += '<td>' + payment.amount + '</td>';
+                    html += '<td>' + taxDue + '</td>';
+                    html += '<td>' + payment.payment_date + '</td>';
+                    html += '<td>' + payment.status + '</td>';
+                    html += '<td>' + payment.due_date + '</td>';
+                    html += '</tr>';
+                });
+                html += '</table>';
+                summaryTable.innerHTML = html;
+            });
         }
-        
-        // Call the function to update tax payment summary on page load
-        updateTaxPaymentSummary();
+
+        // Populate the dropdown options dynamically
+        function populateDueDateOptions() {
+            var currentDate = new Date();
+            var currentYear = currentDate.getFullYear();
+            var options = '';
+            var months = [
+                { month: 3, name: 'April' },
+                { month: 5, name: 'June' },
+                { month: 8, name: 'September' },
+                { month: 11, name: 'January' }
+            ];
+
+            for (var i = 0; i < months.length; i++) {
+                var month = months[i];
+                var dueDate = new Date(currentYear, month.month, 15);
+                options += '<option value="' + dueDate.toISOString().split('T')[0] + '">' + month.name + ' 15, ' + (month.month === 11 ? currentYear + 1 : currentYear) + '</option>';
+            }
+
+            document.getElementById('due_date').innerHTML = options;
+        }
+
+        // Call populateDueDateOptions on page load
+        populateDueDateOptions();
     </script>
 </body>
 </html>
